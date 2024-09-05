@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\Carbon;
+use App\Models\Post;
+use Spatie\Sitemap\Sitemap;
+use Spatie\Sitemap\Tags\Tag;
+use Spatie\Sitemap\Tags\Url;
 use App\Http\Requests\StorePostRequest;
 use App\Http\Requests\UpdatePostRequest;
-use App\Models\Post;
 
 class PostController extends Controller
 {
@@ -62,5 +66,47 @@ class PostController extends Controller
     public function destroy(Post $post)
     {
         //
+    }
+
+    function generateSitemap()
+    {
+        $sitemap = Sitemap::create();
+        // Add static URLs
+        $date = Carbon::now();
+        $sitemap->add(
+            Url::create('/')
+            ->setLastModificationDate($date)
+            ->setPriority(1.0)
+        );
+    
+        $sitemap->add(
+            Url::create('/about')
+                ->setPriority(0.8)
+                ->setChangeFrequency($date)
+        );
+    
+        // Add dynamic URLs for posts
+        $posts = Post::all();
+        foreach($posts as $post) {
+            $sitemap->add(
+                Url::create("/posts/{$post->slug}")
+                    ->setLastModificationDate($post->updated_at)
+                    ->setPriority(0.8)
+            );
+        }
+    
+        // Render the sitemap as a string
+    $sitemapContent = $sitemap->render();
+
+    // Load into DOMDocument for formatting
+    $dom = new \DOMDocument('1.0', 'UTF-8');
+    $dom->preserveWhiteSpace = false;
+    $dom->formatOutput = true;
+    $dom->loadXML($sitemapContent);
+
+    // Save the formatted sitemap
+    $dom->save(public_path('sitemap.xml'));
+    
+        return 'Sitemap created successfully!';
     }
 }
